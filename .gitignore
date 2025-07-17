@@ -1,0 +1,44 @@
+# Binarios
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output del profiler de Go
+*.out
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+
+# Archivos del IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Variables de entorno locales
+.env.local
+
+# Logs
+*.log
+
+# Cobertura de tests
+coverage.html
+coverage.out
+
+# Archivos temporales de OS
+.DS_Store
+Thumbs.db
+
+# Claves 
+.env
+setup.sh
