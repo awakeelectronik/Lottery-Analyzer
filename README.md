@@ -101,7 +101,6 @@ curl http://localhost:8080/api/v1/analysis/best-numbers?limit=50
 
 # Health check
 curl http://localhost:8080/health
-```
 
 ## 🛠️ Comandos Make Disponibles
 
