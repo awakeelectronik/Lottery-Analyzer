@@ -3,9 +3,11 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"lottery-analyzer/internal/model"
+	"lottery-analyzer/pkg/utils"
 )
 
 type resultRepository struct {
@@ -40,6 +42,34 @@ func (r *resultRepository) LastResult(ctx context.Context) (*model.Result, error
 		return nil, nil
 	}
 	return &result, err
+}
+
+func (r *resultRepository) OneDigit(ctx context.Context, cal time.Time, position string) ([]*model.DigitCount, error) {
+
+	escapedCol := utils.EscapeIdentifier(position) // Escapa para evitar SQL injection
+
+	query := fmt.Sprintf(`SELECT COUNT(%s) AS repetition, %s 
+                          FROM result 
+                          WHERE STR_TO_DATE(date, ?) > ? 
+                          GROUP BY %s`,
+		escapedCol, escapedCol, escapedCol)
+
+	// Ejecuta la query con placeholders solo para valores
+	rows, err := r.db.QueryContext(ctx, query, "%d/%m/%Y", cal)
+	if err != nil {
+		return nil, fmt.Errorf("error executing query: %w", err) // Manejo de errores con wrapping
+	}
+	defer rows.Close()
+
+	var counts []*model.DigitCount
+	for rows.Next() {
+		var dc model.DigitCount
+		if err := rows.Scan(&dc.Count, &dc.Digit); err != nil {
+			return nil, err
+		}
+		counts = append(counts, &dc)
+	}
+	return counts, rows.Err()
 }
 
 func (r *resultRepository) CreateBatch(ctx context.Context, results []*model.Result) error {

@@ -1,8 +1,8 @@
-# Lottery Analyzer - Conversor de Grails 2.4.4 a Go 1.21+
+# Lottery Analyzer - Conversión de Grails 2.4.4 a Go 1.21+ y evolución de las estrategias iniciales.
 
-Proyecto en Groovy on Grails 2.4.4: https://github.com/awakeelectronik/chance
+Proyecto original en Groovy on Grails 2.4.4: https://github.com/awakeelectronik/chance
 
-Proyecto optimizado de análisis de lotería convertido de Grails a Go, manteniendo toda la funcionalidad original mientras implementa las mejores prácticas de desarrollo en Go.
+Proyecto optimizado de análisis de lotería convertido de Grails a Go, manteniendo toda la funcionalidad original mientras implementa las mejores prácticas de desarrollo en Go, para a partir de aquí empezar a optimizar e implementar nuevas y mejores estrategias de análisis. 
 
 ## 🏗️ Arquitectura
 

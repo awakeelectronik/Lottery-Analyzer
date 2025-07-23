@@ -5,31 +5,45 @@ import (
 	"fmt"
 	"time"
 
+	"lottery-analyzer/internal/model"
 	"lottery-analyzer/internal/repository"
 )
 
-func CalculateFrequencies(ctx context.Context, resultRepo repository.ResultRepository, digit [][]float64, twoDigit [][]float64, threeDigit [][]float64, fourDigit []float64) (int, [][]float64, [][]float64, [][]float64, []float64, error) {
+// CalculateFrequencies calculates the frequencies of digits, two-digit, three-digit, and four-digit numbers
+// Ya después se pueden calcular las probabilidades de un número de cuatro cifras usando las probabilidades de sus combinaciones.
+
+func CalculateFrequencies(ctx context.Context, resultRepo repository.ResultRepository, twoDigit [][]float64, threeDigit [][]float64, fourDigit []float64) (int, [][]float64, [][]float64, []float64, error) {
 
 	before, actual, frequenciesProcessed := 1, 1, 0
 
+	// contenedor de las probabilidades por dígito
+	digit := &model.DigitFrequency{
+		Position1: make([]float64, 10),
+		Position2: make([]float64, 10),
+		Position3: make([]float64, 10),
+		Position4: make([]float64, 10),
+	}
+
+	// to-do este 5000 hay que volverlo automático y pensarse la lógica que está usando para optimizarla.
 	for actual < 5000 {
 		date := time.Now().AddDate(0, 0, -(actual + 7))
 
-		// Consultar frecuencias
-		if err := queryDigitFrequencies(ctx, date, digit); err != nil {
-			return 0, nil, nil, nil, nil, fmt.Errorf("digit frequency query failed: %w", err)
+		if err := digitFrequencies(ctx, date, resultRepo, digit); err != nil {
+			return 0, nil, nil, nil, fmt.Errorf("digit frequency query failed: %w", err)
 		}
 
+		// to-do aquí vamos
+
 		if err := queryTwoDigitFrequencies(ctx, date, twoDigit); err != nil {
-			return 0, nil, nil, nil, nil, fmt.Errorf("two digit frequency query failed: %w", err)
+			return 0, nil, nil, nil, fmt.Errorf("two digit frequency query failed: %w", err)
 		}
 
 		if err := queryThreeDigitFrequencies(ctx, date, threeDigit); err != nil {
-			return 0, nil, nil, nil, nil, fmt.Errorf("three digit frequency query failed: %w", err)
+			return 0, nil, nil, nil, fmt.Errorf("three digit frequency query failed: %w", err)
 		}
 
 		if err := queryFourDigitFrequencies(ctx, date, fourDigit); err != nil {
-			return 0, nil, nil, nil, nil, fmt.Errorf("four digit frequency query failed: %w", err)
+			return 0, nil, nil, nil, fmt.Errorf("four digit frequency query failed: %w", err)
 		}
 
 		tmp := before
@@ -37,21 +51,60 @@ func CalculateFrequencies(ctx context.Context, resultRepo repository.ResultRepos
 		actual += tmp
 		frequenciesProcessed++
 	}
-	return frequenciesProcessed, digit, twoDigit, threeDigit, fourDigit, nil
+
+	// tmp to-delete
+	fmt.Printf("Frequencies processed by digit:", digit)
+
+	return frequenciesProcessed, twoDigit, threeDigit, fourDigit, nil
 }
 
 // Implementar métodos de consulta de frecuencias (simplificados)
-func queryDigitFrequencies(ctx context.Context, fromDate time.Time, prob [][]float64) error {
-	factors := []float64{1.0, 1.9, 2.69, 2.69}
+func digitFrequencies(ctx context.Context, fromDate time.Time, resultRepo repository.ResultRepository, digitCount *model.DigitFrequency) error {
+	factors := []float64{1.0, 1.9, 2.69, 2.69} //susceptible de ser parámetros si hago computación evolutiva, por eso lo dejo como variable
 
-	for pos := 0; pos < 4; pos++ {
-		// Simplificado: usar resultRepo para obtener frecuencias
-		// En implementación completa, hacer queries SQL específicas
-		for digit := 0; digit < 10; digit++ {
-			prob[pos][digit] += 0.1 * factors[pos] // Valor placeholder
-		}
+	counts, err := resultRepo.OneDigit(ctx, fromDate, "first")
+	if err != nil {
+		return fmt.Errorf("failed to get frecuencies by digit-first: %w", err)
+	} else {
+		digitCount.Position1 = sumProbDigit(counts, digitCount.Position1, factors[0])
 	}
-	return nil
+
+	counts, err = resultRepo.OneDigit(ctx, fromDate, "second")
+	if err != nil {
+		return fmt.Errorf("failed to get frecuencies by digit-second: %w", err)
+	} else {
+		digitCount.Position2 = sumProbDigit(counts, digitCount.Position2, factors[1])
+	}
+
+	counts, err = resultRepo.OneDigit(ctx, fromDate, "third")
+	if err != nil {
+		return fmt.Errorf("failed to get frecuencies by digit-third: %w", err)
+	} else {
+		digitCount.Position3 = sumProbDigit(counts, digitCount.Position3, factors[2])
+	}
+
+	counts, err = resultRepo.OneDigit(ctx, fromDate, "fourth")
+	if err != nil {
+		return fmt.Errorf("failed to get frecuencies by digit-fourth: %w", err)
+	} else {
+		digitCount.Position4 = sumProbDigit(counts, digitCount.Position4, factors[3])
+	}
+
+	return err
+}
+
+func sumProbDigit(results []*model.DigitCount, probAccumulated []float64, factor float64) []float64 {
+	totalResults := 0
+
+	for _, p := range results {
+		totalResults += p.Count
+	}
+
+	for _, p := range results {
+		probAccumulated[p.Digit] += (float64(p.Count) / float64(totalResults)) * factor
+	}
+
+	return probAccumulated
 }
 
 func queryTwoDigitFrequencies(ctx context.Context, fromDate time.Time, prob [][]float64) error {

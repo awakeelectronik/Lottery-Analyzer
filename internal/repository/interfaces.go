@@ -10,10 +10,11 @@ import (
 // ResultRepository define las operaciones de acceso a datos para Result
 type ResultRepository interface {
 	Create(ctx context.Context, result *model.Result) error
+	LastResult(ctx context.Context) (*model.Result, error)
 	CreateBatch(ctx context.Context, results []*model.Result) error
+	OneDigit(ctx context.Context, cal time.Time, position string) ([]*model.DigitCount, error)
 	ID(ctx context.Context, id int) (*model.Result, error)
 	Date(ctx context.Context, date string) ([]*model.Result, error)
-	LastResult(ctx context.Context) (*model.Result, error)
 	LastNResults(ctx context.Context, limit int) ([]*model.Result, error)
 	BetweenDates(ctx context.Context, startDate, endDate time.Time) ([]*model.Result, error)
 	AfterDate(ctx context.Context, date time.Time) ([]*model.Result, error)

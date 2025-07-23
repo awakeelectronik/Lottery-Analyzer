@@ -32,6 +32,7 @@ func (p *processorService) ProcessAnalysis(ctx context.Context) (*model.Analysis
 	}
 
 	// 2. Inicializar matrices de repetición
+	// eliminar después
 	repetitionDigit := make([][]float64, 4)
 	for i := range repetitionDigit {
 		repetitionDigit[i] = make([]float64, 10)
@@ -52,7 +53,7 @@ func (p *processorService) ProcessAnalysis(ctx context.Context) (*model.Analysis
 	// 3. Secuencia Fibonacci para fechas
 	var err error
 	var frequenciesProcessed = 1
-	frequenciesProcessed, repetitionDigit, repetitionTwoDigit, repetitionThreeDigit, repetitionFourDigit, err = CalculateFrequencies(ctx, p.resultRepo, repetitionDigit, repetitionTwoDigit, repetitionThreeDigit, repetitionFourDigit)
+	frequenciesProcessed, repetitionTwoDigit, repetitionThreeDigit, repetitionFourDigit, err = CalculateFrequencies(ctx, p.resultRepo, repetitionTwoDigit, repetitionThreeDigit, repetitionFourDigit)
 
 	// 4. Calcular probabilidades y encontrar mejores números
 	bestNumbers := make([]int, 100)
