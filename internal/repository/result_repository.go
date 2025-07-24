@@ -72,6 +72,35 @@ func (r *resultRepository) OneDigit(ctx context.Context, cal time.Time, position
 	return counts, rows.Err()
 }
 
+func (r *resultRepository) TwoDigit(ctx context.Context, cal time.Time, position1 string, position2 string) ([]*model.TwoDigitCount, error) {
+
+	escapedCol1 := utils.EscapeIdentifier(position1) // Escapa para evitar SQL injection
+	escapedCol2 := utils.EscapeIdentifier(position2) // Escapa para evitar SQL injection
+
+	query := fmt.Sprintf(`SELECT COUNT(%s) AS repetition, %s, %s 
+                          FROM result 
+                          WHERE STR_TO_DATE(date, ?) > ? 
+                          GROUP BY %s, %s`,
+		escapedCol1, escapedCol1, escapedCol2, escapedCol1, escapedCol2)
+
+	// Ejecuta la query con placeholders solo para valores
+	rows, err := r.db.QueryContext(ctx, query, "%d/%m/%Y", cal)
+	if err != nil {
+		return nil, fmt.Errorf("error executing query: %w", err) // Manejo de errores con wrapping
+	}
+	defer rows.Close()
+
+	var counts []*model.TwoDigitCount
+	for rows.Next() {
+		var dc model.TwoDigitCount
+		if err := rows.Scan(&dc.Count, &dc.FirstDigit, &dc.SecondDigit); err != nil {
+			return nil, err
+		}
+		counts = append(counts, &dc)
+	}
+	return counts, rows.Err()
+}
+
 func (r *resultRepository) CreateBatch(ctx context.Context, results []*model.Result) error {
 	if len(results) == 0 {
 		return nil

@@ -9,11 +9,11 @@ type DigitFrequency struct {
 
 type TwoDigitFrequency struct {
 	FirstSecond  []float64 `json:"first_second"`
-	SecondThird  []float64 `json:"second_third"`
-	ThirdFourth  []float64 `json:"third_fourth"`
 	FirstThird   []float64 `json:"first_third"`
 	FirstFourth  []float64 `json:"first_fourth"`
+	SecondThird  []float64 `json:"second_third"`
 	SecondFourth []float64 `json:"second_fourth"`
+	ThirdFourth  []float64 `json:"third_fourth"`
 }
 
 type ThreeDigitFrequency struct {
