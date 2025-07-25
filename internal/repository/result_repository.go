@@ -101,6 +101,36 @@ func (r *resultRepository) TwoDigit(ctx context.Context, cal time.Time, position
 	return counts, rows.Err()
 }
 
+func (r *resultRepository) ThreeDigit(ctx context.Context, cal time.Time, position1 string, position2 string, position3 string) ([]*model.ThreeDigitCount, error) {
+
+	escapedCol1 := utils.EscapeIdentifier(position1) // Escapa para evitar SQL injection
+	escapedCol2 := utils.EscapeIdentifier(position2) // Escapa para evitar SQL injection
+	escapedCol3 := utils.EscapeIdentifier(position3) // Escapa para evitar SQL injection
+
+	query := fmt.Sprintf(`SELECT COUNT(%s) AS repetition, %s, %s, %s
+                          FROM result 
+                          WHERE STR_TO_DATE(date, ?) > ? 
+                          GROUP BY %s, %s, %s`,
+		escapedCol1, escapedCol1, escapedCol2, escapedCol3, escapedCol1, escapedCol2, escapedCol3)
+
+	// Ejecuta la query con placeholders solo para valores
+	rows, err := r.db.QueryContext(ctx, query, "%d/%m/%Y", cal)
+	if err != nil {
+		return nil, fmt.Errorf("error executing query: %w", err) // Manejo de errores con wrapping
+	}
+	defer rows.Close()
+
+	var counts []*model.ThreeDigitCount
+	for rows.Next() {
+		var dc model.ThreeDigitCount
+		if err := rows.Scan(&dc.Count, &dc.FirstDigit, &dc.SecondDigit, &dc.ThirdDigit); err != nil {
+			return nil, err
+		}
+		counts = append(counts, &dc)
+	}
+	return counts, rows.Err()
+}
+
 func (r *resultRepository) CreateBatch(ctx context.Context, results []*model.Result) error {
 	if len(results) == 0 {
 		return nil

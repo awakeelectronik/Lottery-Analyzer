@@ -23,10 +23,10 @@ type TwoDigitCount struct {
 }
 
 type ThreeDigitCount struct {
+	Count       int `json:"count"`
 	FirstDigit  int `json:"first_digit"`
 	SecondDigit int `json:"second_digit"`
 	ThirdDigit  int `json:"third_digit"`
-	Count       int `json:"count"`
 }
 
 type FourDigitCount struct {

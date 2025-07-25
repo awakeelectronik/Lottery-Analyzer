@@ -13,7 +13,7 @@ import (
 // CalculateFrequencies calculates the frequencies of digits, two-digit, three-digit, and four-digit numbers
 // Ya después se pueden calcular las probabilidades de un número de cuatro cifras usando las probabilidades de sus combinaciones.
 
-func CalculateFrequencies(ctx context.Context, resultRepo repository.ResultRepository, threeDigit [][]float64, fourDigit []float64) (int, [][]float64, []float64, error) {
+func CalculateFrequencies(ctx context.Context, resultRepo repository.ResultRepository) (int, error) {
 
 	before, actual, frequenciesProcessed := 1, 1, 0
 
@@ -34,27 +34,33 @@ func CalculateFrequencies(ctx context.Context, resultRepo repository.ResultRepos
 		ThirdFourth:  make([]float64, 100),
 	}
 
+	threeDigit := &model.ThreeDigitFrequency{
+		FirstSecondThird:  make([]float64, 1000),
+		FirstSecondFourth: make([]float64, 1000),
+		FirstThirdFourth:  make([]float64, 1000),
+		SecondThirdFourth: make([]float64, 1000),
+	}
+
 	// to-do este 5000 hay que volverlo automático y pensarse la lógica que está usando para optimizarla.
 	for actual < 5000 {
 		date := time.Now().AddDate(0, 0, -(actual + 7))
 
 		if err := digitFrequencies(ctx, date, resultRepo, digit); err != nil {
-			return 0, nil, nil, fmt.Errorf("digit frequency query failed: %w", err)
+			return 0, fmt.Errorf("digit frequency query failed: %w", err)
 		}
 
-		// to-do aquí vamos
 		if err := twoDigitFrequencies(ctx, date, resultRepo, twoDigit); err != nil {
-			return 0, nil, nil, fmt.Errorf("two digit frequency query failed: %w", err)
-		}
-		// to-do aquí vamos
-
-		if err := queryThreeDigitFrequencies(ctx, date, threeDigit); err != nil {
-			return 0, nil, nil, fmt.Errorf("three digit frequency query failed: %w", err)
+			return 0, fmt.Errorf("two digit frequency query failed: %w", err)
 		}
 
-		if err := queryFourDigitFrequencies(ctx, date, fourDigit); err != nil {
-			return 0, nil, nil, fmt.Errorf("four digit frequency query failed: %w", err)
+		if err := threeDigitFrequencies(ctx, date, resultRepo, threeDigit); err != nil {
+			return 0, fmt.Errorf("three digit frequency query failed: %w", err)
 		}
+
+		/*
+			if err := queryFourDigitFrequencies(ctx, date, fourDigit); err != nil {
+				return 0, fmt.Errorf("four digit frequency query failed: %w", err)
+			}*/
 
 		tmp := before
 		before = actual
@@ -62,13 +68,13 @@ func CalculateFrequencies(ctx context.Context, resultRepo repository.ResultRepos
 		frequenciesProcessed++
 	}
 
-	for i, v := range twoDigit.FirstSecond {
-		fmt.Printf("Digit: %d  Value: %f\n", i, v)
+	for i, v := range threeDigit.FirstSecondThird {
+		if v > 70 {
+			fmt.Printf("Digit: %d  Value: %f\n", i, v)
+		}
 	}
-	// tmp to-delete
-	//fmt.Printf("Frequencies processed by digit:", twoDigit)
 
-	return frequenciesProcessed, threeDigit, fourDigit, nil
+	return frequenciesProcessed, nil
 }
 
 // Implementar métodos de consulta de frecuencias (simplificados)
@@ -121,7 +127,7 @@ func sumProbDigit(results []*model.DigitCount, probAccumulated []float64, factor
 }
 
 func twoDigitFrequencies(ctx context.Context, fromDate time.Time, resultRepo repository.ResultRepository, twoDigitCount *model.TwoDigitFrequency) error {
-	factors := []float64{1.0, 1.45, 1.45, 1.55, 1.55, 5}
+	factors := []float64{1.0, 1.45, 1.45, 1.55, 1.55, 5.0}
 
 	counts, err := resultRepo.TwoDigit(ctx, fromDate, "first", "second")
 	if err != nil {
@@ -184,15 +190,54 @@ func sumProbTwoDigit(results []*model.TwoDigitCount, probAccumulated []float64, 
 	return probAccumulated
 }
 
-func queryThreeDigitFrequencies(ctx context.Context, fromDate time.Time, prob [][]float64) error {
-	factors := []float64{1.0, 1.2, 1.2, 1.0}
+func threeDigitFrequencies(ctx context.Context, fromDate time.Time, resultRepo repository.ResultRepository, threeDigitCount *model.ThreeDigitFrequency) error {
+	factors := []float64{1.0, 1.0, 5.0, 5.0}
 
-	for i := 0; i < 4; i++ {
-		for j := 0; j < 1000; j++ {
-			prob[i][j] += 0.001 * factors[i] // Valor placeholder
-		}
+	counts, err := resultRepo.ThreeDigit(ctx, fromDate, "first", "second", "third")
+	if err != nil {
+		return fmt.Errorf("failed to get frecuencies by threeDigit-first-second-third: %w", err)
+	} else {
+		threeDigitCount.FirstSecondThird = sumProbThreeDigit(counts, threeDigitCount.FirstSecondThird, factors[0])
 	}
+
+	counts, err = resultRepo.ThreeDigit(ctx, fromDate, "first", "second", "fourth")
+	if err != nil {
+		return fmt.Errorf("failed to get frecuencies by threeDigit-first-second-fourth: %w", err)
+	} else {
+		threeDigitCount.FirstSecondFourth = sumProbThreeDigit(counts, threeDigitCount.FirstSecondFourth, factors[1])
+	}
+
+	counts, err = resultRepo.ThreeDigit(ctx, fromDate, "first", "third", "fourth")
+	if err != nil {
+		return fmt.Errorf("failed to get frecuencies by threeDigit-first-third-fourth: %w", err)
+	} else {
+		threeDigitCount.FirstThirdFourth = sumProbThreeDigit(counts, threeDigitCount.FirstThirdFourth, factors[2])
+	}
+
+	counts, err = resultRepo.ThreeDigit(ctx, fromDate, "second", "third", "fourth")
+	if err != nil {
+		return fmt.Errorf("failed to get frecuencies by threeDigit-second-third-fourth: %w", err)
+	} else {
+		threeDigitCount.SecondThirdFourth = sumProbThreeDigit(counts, threeDigitCount.SecondThirdFourth, factors[3])
+	}
+
 	return nil
+}
+
+func sumProbThreeDigit(results []*model.ThreeDigitCount, probAccumulated []float64, factor float64) []float64 {
+	totalResults := 0
+	weighting := 100.0 // Este weighting es un placeholder, se ajustará usando computación evolutiva to-do-ia
+
+	for _, p := range results {
+		totalResults += p.Count
+	}
+
+	for _, p := range results {
+		num, _ := strconv.Atoi(fmt.Sprintf("%d%d%d", p.FirstDigit, p.SecondDigit, p.ThirdDigit))
+		probAccumulated[num] += (float64(p.Count) / float64(totalResults)) * factor * weighting
+	}
+
+	return probAccumulated
 }
 
 func queryFourDigitFrequencies(ctx context.Context, fromDate time.Time, prob []float64) error {

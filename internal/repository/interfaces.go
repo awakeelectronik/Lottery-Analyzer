@@ -13,6 +13,7 @@ type ResultRepository interface {
 	LastResult(ctx context.Context) (*model.Result, error)
 	OneDigit(ctx context.Context, cal time.Time, position string) ([]*model.DigitCount, error)
 	TwoDigit(ctx context.Context, cal time.Time, position1 string, position2 string) ([]*model.TwoDigitCount, error)
+	ThreeDigit(ctx context.Context, cal time.Time, position1 string, position2 string, position3 string) ([]*model.ThreeDigitCount, error)
 	CreateBatch(ctx context.Context, results []*model.Result) error
 	ID(ctx context.Context, id int) (*model.Result, error)
 	Date(ctx context.Context, date string) ([]*model.Result, error)
