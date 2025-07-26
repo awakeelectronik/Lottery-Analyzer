@@ -41,8 +41,13 @@ func CalculateFrequencies(ctx context.Context, resultRepo repository.ResultRepos
 		SecondThirdFourth: make([]float64, 1000),
 	}
 
+	fourDigit := &model.FourDigitFrequency{
+		Complete: make([]float64, 10000),
+	}
+
 	// to-do este 5000 hay que volverlo automático y pensarse la lógica que está usando para optimizarla.
 	for actual < 5000 {
+
 		date := time.Now().AddDate(0, 0, -(actual + 7))
 
 		if err := digitFrequencies(ctx, date, resultRepo, digit); err != nil {
@@ -57,27 +62,27 @@ func CalculateFrequencies(ctx context.Context, resultRepo repository.ResultRepos
 			return 0, fmt.Errorf("three digit frequency query failed: %w", err)
 		}
 
-		/*
-			if err := queryFourDigitFrequencies(ctx, date, fourDigit); err != nil {
-				return 0, fmt.Errorf("four digit frequency query failed: %w", err)
-			}*/
+		if err := fourDigitFrequencies(ctx, date, resultRepo, fourDigit); err != nil {
+			return 0, fmt.Errorf("four digit frequency query failed: %w", err)
+		}
 
-		tmp := before
-		before = actual
-		actual += tmp
+		before, actual = actual, before+actual
+		//fmt.Printf("actual: %d \n", actual)
 		frequenciesProcessed++
 	}
 
-	for i, v := range threeDigit.FirstSecondThird {
-		if v > 70 {
-			fmt.Printf("Digit: %d  Value: %f\n", i, v)
+	for i, v := range fourDigit.Complete {
+		if v > 100 {
+			fmt.Printf("Digit %d frequency is %f \n", i, v)
+
 		}
 	}
 
 	return frequenciesProcessed, nil
 }
 
-// Implementar métodos de consulta de frecuencias (simplificados)
+// Implementar métodos de consulta de frecuencias por commbinación de uno, dos y tres dígitos, también con todos los dígitos.
+
 func digitFrequencies(ctx context.Context, fromDate time.Time, resultRepo repository.ResultRepository, digitCount *model.DigitFrequency) error {
 	factors := []float64{1.0, 1.9, 2.69, 2.69} //susceptible de ser parámetros si hago computación evolutiva, por eso lo dejo como variable to-do-ia
 
@@ -240,9 +245,19 @@ func sumProbThreeDigit(results []*model.ThreeDigitCount, probAccumulated []float
 	return probAccumulated
 }
 
-func queryFourDigitFrequencies(ctx context.Context, fromDate time.Time, prob []float64) error {
-	for i := 0; i < 10000; i++ {
-		prob[i] += 0.0001 // Valor placeholder
+func fourDigitFrequencies(ctx context.Context, fromDate time.Time, resultRepo repository.ResultRepository, fourDigitCount *model.FourDigitFrequency) error {
+	counts, err := resultRepo.FourthDigit(ctx, fromDate)
+	if err != nil {
+		return fmt.Errorf("failed to get frecuencies by all digits: %w", err)
+	} else {
+		totalResults := 0
+		for _, p := range counts {
+			totalResults += p.Count
+		}
+		for _, p := range counts {
+			fourDigitCount.Complete[p.Number] += (float64(p.Count) / float64(totalResults)) * 1000
+		}
 	}
-	return nil
+
+	return err
 }

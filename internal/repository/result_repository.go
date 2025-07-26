@@ -131,6 +131,31 @@ func (r *resultRepository) ThreeDigit(ctx context.Context, cal time.Time, positi
 	return counts, rows.Err()
 }
 
+func (r *resultRepository) FourthDigit(ctx context.Context, cal time.Time) ([]*model.FourDigitCount, error) {
+	query := `SELECT COUNT(first) AS repetition, first, second, third, fourth 
+                          FROM result 
+                          WHERE STR_TO_DATE(date, ?) > ? 
+                          GROUP BY first, second, third, fourth`
+
+	rows, err := r.db.QueryContext(ctx, query, "%d/%m/%Y", cal)
+	if err != nil {
+		return nil, fmt.Errorf("error executing query: %w", err)
+	}
+	defer rows.Close()
+
+	var counts []*model.FourDigitCount
+	for rows.Next() {
+		var first, second, third, fourth int
+		dc := model.FourDigitCount{}
+		if err := rows.Scan(&dc.Count, &first, &second, &third, &fourth); err != nil {
+			return nil, err
+		}
+		dc.Number = first*1000 + second*100 + third*10 + fourth
+		counts = append(counts, &dc)
+	}
+	return counts, rows.Err()
+}
+
 func (r *resultRepository) CreateBatch(ctx context.Context, results []*model.Result) error {
 	if len(results) == 0 {
 		return nil
