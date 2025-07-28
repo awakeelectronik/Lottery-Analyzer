@@ -51,10 +51,13 @@ func (p *processorService) ProcessAnalysis(ctx context.Context) (*model.Analysis
 	repetitionFourDigit := make([]float64, 10000)
 
 	// 3. Secuencia Fibonacci para fechas
-	var frequenciesProcessed int
-	frequenciesProcessed, err := CalculateFrequencies(ctx, p.resultRepo)
+	frequencyData, fibCalcuCount, err := CalculateFrequencies(ctx, p.resultRepo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate frequencies: %w", err)
+	}
+
+	if frequencyData == nil {
+		return nil, fmt.Errorf("frequency data is nil")
 	}
 
 	// 4. Calcular probabilidades y encontrar mejores números
@@ -90,7 +93,7 @@ func (p *processorService) ProcessAnalysis(ctx context.Context) (*model.Analysis
 		BestNumbers:    bestNumbers,
 		BestScores:     bestScores,
 		TotalProcessed: 10000,
-		DaysAnalyzed:   frequenciesProcessed,
+		DaysAnalyzed:   fibCalcuCount,
 		ExecutionTime:  time.Since(start).String(),
 		Timestamp:      time.Now(),
 		UnplayedCount:  unplayedCount,

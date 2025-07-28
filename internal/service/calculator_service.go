@@ -13,7 +13,7 @@ import (
 // CalculateFrequencies calculates the frequencies of digits, two-digit, three-digit, and four-digit numbers
 // Ya después se pueden calcular las probabilidades de un número de cuatro cifras usando las probabilidades de sus combinaciones.
 
-func CalculateFrequencies(ctx context.Context, resultRepo repository.ResultRepository) (int, error) {
+func CalculateFrequencies(ctx context.Context, resultRepo repository.ResultRepository) (*model.FrequencyData, int, error) {
 
 	before, actual, frequenciesProcessed := 1, 1, 0
 
@@ -45,25 +45,32 @@ func CalculateFrequencies(ctx context.Context, resultRepo repository.ResultRepos
 		Complete: make([]float64, 10000),
 	}
 
+	frequencyData := &model.FrequencyData{
+		DigitFreq:      *digit,
+		TwoDigitFreq:   *twoDigit,
+		ThreeDigitFreq: *threeDigit,
+		FourDigitFreq:  *fourDigit,
+	}
+
 	// to-do este 5000 hay que volverlo automático y pensarse la lógica que está usando para optimizarla.
 	for actual < 5000 {
 
 		date := time.Now().AddDate(0, 0, -(actual + 7))
 
 		if err := digitFrequencies(ctx, date, resultRepo, digit); err != nil {
-			return 0, fmt.Errorf("digit frequency query failed: %w", err)
+			return nil, 0, fmt.Errorf("digit frequency query failed: %w", err)
 		}
 
 		if err := twoDigitFrequencies(ctx, date, resultRepo, twoDigit); err != nil {
-			return 0, fmt.Errorf("two digit frequency query failed: %w", err)
+			return nil, 0, fmt.Errorf("two digit frequency query failed: %w", err)
 		}
 
 		if err := threeDigitFrequencies(ctx, date, resultRepo, threeDigit); err != nil {
-			return 0, fmt.Errorf("three digit frequency query failed: %w", err)
+			return nil, 0, fmt.Errorf("three digit frequency query failed: %w", err)
 		}
 
 		if err := fourDigitFrequencies(ctx, date, resultRepo, fourDigit); err != nil {
-			return 0, fmt.Errorf("four digit frequency query failed: %w", err)
+			return nil, 0, fmt.Errorf("four digit frequency query failed: %w", err)
 		}
 
 		before, actual = actual, before+actual
@@ -71,7 +78,7 @@ func CalculateFrequencies(ctx context.Context, resultRepo repository.ResultRepos
 		frequenciesProcessed++
 	}
 
-	return frequenciesProcessed, nil
+	return frequencyData, frequenciesProcessed, nil
 }
 
 // Implementar métodos de consulta de frecuencias por commbinación de uno, dos y tres dígitos, también con todos los dígitos.
