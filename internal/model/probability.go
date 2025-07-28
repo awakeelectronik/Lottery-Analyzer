@@ -27,18 +27,11 @@ type FourDigitFrequency struct {
 	Complete []float64 `json:"complete"`
 }
 
-type AllDigitFrequencies struct {
-	Position1 []DigitCount `json:"position_1"`
-	Position2 []DigitCount `json:"position_2"`
-	Position3 []DigitCount `json:"position_3"`
-	Position4 []DigitCount `json:"position_4"`
-}
-
 type FrequencyData struct {
-	DigitFreq      *AllDigitFrequencies `json:"digit_frequencies"`
-	TwoDigitFreq   []TwoDigitCount      `json:"two_digit_frequencies"`
-	ThreeDigitFreq []ThreeDigitCount    `json:"three_digit_frequencies"`
-	FourDigitFreq  []FourDigitCount     `json:"four_digit_frequencies"`
+	DigitFreq      DigitFrequency      `json:"digit_frequencies"`
+	TwoDigitFreq   TwoDigitFrequency   `json:"two_digit_frequencies"`
+	ThreeDigitFreq ThreeDigitFrequency `json:"three_digit_frequencies"`
+	FourDigitFreq  FourDigitFrequency  `json:"four_digit_frequencies"`
 }
 
 type DatabaseStats struct {

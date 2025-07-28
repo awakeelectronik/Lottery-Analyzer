@@ -71,13 +71,6 @@ func CalculateFrequencies(ctx context.Context, resultRepo repository.ResultRepos
 		frequenciesProcessed++
 	}
 
-	for i, v := range fourDigit.Complete {
-		if v > 100 {
-			fmt.Printf("Digit %d frequency is %f \n", i, v)
-
-		}
-	}
-
 	return frequenciesProcessed, nil
 }
 
