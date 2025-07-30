@@ -3,13 +3,13 @@ package model
 import "time"
 
 type Analysis struct {
-	BestNumbers    []int     `json:"best_numbers"`
-	BestScores     []float64 `json:"best_scores"`
-	TotalProcessed int       `json:"total_processed"`
-	DaysAnalyzed   int       `json:"days_analyzed"`
-	ExecutionTime  string    `json:"execution_time"`
-	Timestamp      time.Time `json:"timestamp"`
-	UnplayedCount  int       `json:"unplayed_count"`
+	BestNumbers       []int     `json:"best_numbers"`
+	BestScores        []float64 `json:"best_scores"`
+	TotalProcessed    int       `json:"total_processed"`
+	GroupDaysAnalyzed int       `json:"days_analyzed"`
+	ExecutionTime     string    `json:"execution_time"`
+	Timestamp         time.Time `json:"timestamp"`
+	UnplayedCount     int       `json:"unplayed_count"`
 }
 
 type AnalysisParams struct {

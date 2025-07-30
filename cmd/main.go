@@ -52,5 +52,6 @@ func main() {
 	log.Printf("Analysis completed in %v", time.Since(start))
 	log.Printf("Best numbers: %v", analysis.BestNumbers[:10])
 	log.Printf("Total processed: %d", analysis.TotalProcessed)
-	log.Printf("Days analyzed: %d", analysis.DaysAnalyzed)
+	log.Printf("Days grouped by fibonacci analyzed : %d", analysis.GroupDaysAnalyzed)
+	log.Printf("Numbers without occurrences : %d", analysis.UnplayedCount)
 }

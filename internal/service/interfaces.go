@@ -17,7 +17,6 @@ type ScrapperService interface {
 // ProcessorService define las operaciones de análisis y procesamiento
 type ProcessorService interface {
 	ProcessAnalysis(ctx context.Context) (*model.Analysis, error)
-	ProcessAnalysisWithParams(ctx context.Context, params *model.AnalysisParams) (*model.Analysis, error)
 	BestNumbers(ctx context.Context, limit int) ([]int, []float64, error)
 	UnplayedNumbers(ctx context.Context) (int, error)
 	CalculateProbability(ctx context.Context, number int) (float64, error)

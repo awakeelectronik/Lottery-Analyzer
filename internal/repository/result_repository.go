@@ -156,6 +156,61 @@ func (r *resultRepository) FourthDigit(ctx context.Context, cal time.Time) ([]*m
 	return counts, rows.Err()
 }
 
+func (r *resultRepository) AllPlayedNumbers(ctx context.Context) ([]string, error) {
+	query := `SELECT DISTINCT CONCAT(LPAD(first, 1, '0'), LPAD(second, 1, '0'), 
+              LPAD(third, 1, '0'), LPAD(fourth, 1, '0')) as number FROM result`
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var numbers []string
+	for rows.Next() {
+		var number string
+		if err := rows.Scan(&number); err != nil {
+			return nil, err
+		}
+		numbers = append(numbers, number)
+	}
+
+	return numbers, rows.Err()
+}
+
+func (r *resultRepository) SaveAnalysis(ctx context.Context, analysis *[]byte) error {
+	query := `INSERT INTO analysis (data, created_at) VALUES (?, ?)`
+
+	_, err := r.db.ExecContext(ctx, query, analysis, time.Now())
+
+	return err
+
+}
+
+func (r *resultRepository) ShouldAnalyzeDate(ctx context.Context, date time.Time) (bool, error) {
+	query := `SELECT COUNT(*) FROM analysis WHERE DATE(created_at) = DATE(?)`
+
+	var count int
+	err := r.db.QueryRowContext(ctx, query, date).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	// true si NO hay análisis para esa fecha, false si ya existe
+	return count == 0, nil
+}
+
+func (r *resultRepository) LastAnalysis(ctx context.Context) ([]byte, error) {
+	query := `SELECT data FROM analysis ORDER BY id DESC LIMIT 1`
+
+	row := r.db.QueryRowContext(ctx, query)
+	var data []byte
+	if err := row.Scan(&data); err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
 func (r *resultRepository) CreateBatch(ctx context.Context, results []*model.Result) error {
 	if len(results) == 0 {
 		return nil
@@ -340,26 +395,4 @@ func (r *resultRepository) CountBetweenDates(ctx context.Context, startDate, end
 	var count int
 	err := r.db.QueryRowContext(ctx, query, startDate, endDate).Scan(&count)
 	return count, err
-}
-
-func (r *resultRepository) AllPlayedNumbers(ctx context.Context) ([]string, error) {
-	query := `SELECT DISTINCT CONCAT(LPAD(first, 1, '0'), LPAD(second, 1, '0'), 
-              LPAD(third, 1, '0'), LPAD(fourth, 1, '0')) as number FROM result`
-
-	rows, err := r.db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var numbers []string
-	for rows.Next() {
-		var number string
-		if err := rows.Scan(&number); err != nil {
-			return nil, err
-		}
-		numbers = append(numbers, number)
-	}
-
-	return numbers, rows.Err()
 }

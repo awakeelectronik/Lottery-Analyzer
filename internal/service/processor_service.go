@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
@@ -26,64 +27,93 @@ func NewProcessorService(scrapper ScrapperService, resultRepo repository.ResultR
 func (p *processorService) ProcessAnalysis(ctx context.Context) (*model.Analysis, error) {
 	start := time.Now()
 
-	// 1. Ejecutar scrapping
-	if err := p.scrapperService.ScrapingFromLastDate(ctx); err != nil {
-		return nil, fmt.Errorf("scrapping failed: %w", err)
-	}
-
-	// 2. Secuencia Fibonacci para fechas y encontrar frecuencias
-	frequencyData, fibCalcuCount, err := CalculateFrequencies(ctx, p.resultRepo)
+	shouldAnalyze, err := p.resultRepo.ShouldAnalyzeDate(ctx, time.Now())
 	if err != nil {
-		return nil, fmt.Errorf("failed to calculate frequencies: %w", err)
+		// manejar error
 	}
+	if shouldAnalyze {
 
-	if frequencyData == nil {
-		return nil, fmt.Errorf("frequency data is nil")
-	}
-
-	// 3. Calcular probabilidades y encontrar mejores números
-	bestNumbers := make([]int, 100)
-	bestScores := make([]float64, 100)
-
-	// Inicializar con valores altos
-	for i := range bestScores {
-		bestScores[i] = 10000.0
-		bestNumbers[i] = 1000 - i
-	}
-
-	for number := 0; number < 10000; number++ {
-		score := p.calculateProbabilityResult(number, frequencyData)
-
-		// Si el score es mejor que el peor de los mejores
-		if bestScores[99] > score {
-			bestScores[99] = score
-			bestNumbers[99] = number
-
-			// Ordenar y reorganizar
-			p.sortBestNumbers(bestNumbers, bestScores)
+		// 1. Ejecutar scrapping
+		if err := p.scrapperService.ScrapingFromLastDate(ctx); err != nil {
+			return nil, fmt.Errorf("scrapping failed: %w", err)
 		}
+
+		// 2. Secuencia Fibonacci para fechas y encontrar frecuencias
+		frequencyData, fibCalcuCount, err := CalculateFrequencies(ctx, p.resultRepo)
+		if err != nil {
+			return nil, fmt.Errorf("failed to calculate frequencies: %w", err)
+		}
+
+		if frequencyData == nil {
+			return nil, fmt.Errorf("frequency data is nil")
+		}
+
+		// 3. Calcular probabilidades y encontrar mejores números
+		bestNumbers := make([]int, 100)
+		bestScores := make([]float64, 100)
+
+		// Inicializar con valores altos
+		for i := range bestScores {
+			bestScores[i] = 10000.0
+			bestNumbers[i] = 1000 - i
+		}
+
+		for number := 0; number < 10000; number++ {
+			score := p.calculateProbabilityResult(number, frequencyData)
+
+			// Si el score es mejor que el peor de los mejores
+			if bestScores[99] > score {
+				bestScores[99] = score
+				bestNumbers[99] = number
+
+				// Ordenar y reorganizar
+				p.sortBestNumbers(bestNumbers, bestScores)
+			}
+		}
+
+		// 4. Calcular números que no han caído nunca
+		unplayedCount, err := p.UnplayedNumbers(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get unplayed numbers: %w", err)
+		}
+
+		// 5. Serializar análisis y guardar en la base de datos así no se vuelve a calcular
+
+		analysis := &model.Analysis{
+			BestNumbers:       bestNumbers,
+			BestScores:        bestScores,
+			TotalProcessed:    10000,
+			GroupDaysAnalyzed: fibCalcuCount,
+			ExecutionTime:     time.Since(start).String(),
+			Timestamp:         time.Now(),
+			UnplayedCount:     unplayedCount,
+		}
+
+		data, err := json.Marshal(analysis)
+		if err != nil {
+			return nil, fmt.Errorf("failed to seriayze analysis: %w", err)
+		}
+
+		if err := p.resultRepo.SaveAnalysis(ctx, &data); err != nil {
+			return nil, fmt.Errorf("failed to save analysis: %w", err)
+		}
+
+		return analysis, nil
+	} else {
+		// recuperar análisis existente
+		data, err := p.resultRepo.LastAnalysis(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get last analysis: %w", err)
+		}
+		fmt.Printf("Using existing analysis: %s\n", data)
+
+		var analysis model.Analysis
+		if err := json.Unmarshal(data, &analysis); err != nil {
+			return nil, err
+		}
+
+		return &analysis, nil
 	}
-
-	// 4. Calcular números no jugados
-	unplayedCount, err := p.UnplayedNumbers(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get unplayed numbers: %w", err)
-	}
-
-	return &model.Analysis{
-		BestNumbers:    bestNumbers,
-		BestScores:     bestScores,
-		TotalProcessed: 10000,
-		DaysAnalyzed:   fibCalcuCount,
-		ExecutionTime:  time.Since(start).String(),
-		Timestamp:      time.Now(),
-		UnplayedCount:  unplayedCount,
-	}, nil
-}
-
-func (p *processorService) ProcessAnalysisWithParams(ctx context.Context, params *model.AnalysisParams) (*model.Analysis, error) {
-	// Implementación simplificada usando ProcessAnalysis base
-	return p.ProcessAnalysis(ctx)
 }
 
 func (p *processorService) BestNumbers(ctx context.Context, limit int) ([]int, []float64, error) {
