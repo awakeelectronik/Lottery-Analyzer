@@ -31,26 +31,7 @@ func (p *processorService) ProcessAnalysis(ctx context.Context) (*model.Analysis
 		return nil, fmt.Errorf("scrapping failed: %w", err)
 	}
 
-	// 2. Inicializar matrices de repetición
-	// eliminar después
-	repetitionDigit := make([][]float64, 4)
-	for i := range repetitionDigit {
-		repetitionDigit[i] = make([]float64, 10)
-	}
-
-	repetitionTwoDigit := make([][]float64, 6)
-	for i := range repetitionTwoDigit {
-		repetitionTwoDigit[i] = make([]float64, 100)
-	}
-
-	repetitionThreeDigit := make([][]float64, 4)
-	for i := range repetitionThreeDigit {
-		repetitionThreeDigit[i] = make([]float64, 1000)
-	}
-
-	repetitionFourDigit := make([]float64, 10000)
-
-	// 3. Secuencia Fibonacci para fechas
+	// 2. Secuencia Fibonacci para fechas y encontrar frecuencias
 	frequencyData, fibCalcuCount, err := CalculateFrequencies(ctx, p.resultRepo)
 	if err != nil {
 		return nil, fmt.Errorf("failed to calculate frequencies: %w", err)
@@ -60,7 +41,7 @@ func (p *processorService) ProcessAnalysis(ctx context.Context) (*model.Analysis
 		return nil, fmt.Errorf("frequency data is nil")
 	}
 
-	// 4. Calcular probabilidades y encontrar mejores números
+	// 3. Calcular probabilidades y encontrar mejores números
 	bestNumbers := make([]int, 100)
 	bestScores := make([]float64, 100)
 
@@ -71,7 +52,7 @@ func (p *processorService) ProcessAnalysis(ctx context.Context) (*model.Analysis
 	}
 
 	for number := 0; number < 10000; number++ {
-		score := p.calculateProbabilityResult(number, repetitionDigit, repetitionTwoDigit, repetitionThreeDigit, repetitionFourDigit)
+		score := p.calculateProbabilityResult(number, frequencyData)
 
 		// Si el score es mejor que el peor de los mejores
 		if bestScores[99] > score {
@@ -83,7 +64,7 @@ func (p *processorService) ProcessAnalysis(ctx context.Context) (*model.Analysis
 		}
 	}
 
-	// 5. Calcular números no jugados
+	// 4. Calcular números no jugados
 	unplayedCount, err := p.UnplayedNumbers(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get unplayed numbers: %w", err)
@@ -162,7 +143,7 @@ func (p *processorService) Statistics(ctx context.Context) (*model.Statistics, e
 
 // Funciones auxiliares
 
-func (p *processorService) calculateProbabilityResult(number int, digitRep [][]float64, twoDigitRep [][]float64, threeDigitRep [][]float64, fourDigitRep []float64) float64 {
+func (p *processorService) calculateProbabilityResult(number int, frecuencies *model.FrequencyData) float64 {
 	numberStr := fmt.Sprintf("%04d", number)
 	var prob float64
 
@@ -173,25 +154,26 @@ func (p *processorService) calculateProbabilityResult(number int, digitRep [][]f
 	}
 
 	// Probabilidad por dígito individual
-	prob += digitRep[0][digits[0]]
-	prob += digitRep[1][digits[1]]
-	prob += digitRep[2][digits[2]]
-	prob += digitRep[3][digits[3]]
+	prob += frecuencies.DigitFreq.Position1[digits[0]]
+	prob += frecuencies.DigitFreq.Position2[digits[1]]
+	prob += frecuencies.DigitFreq.Position3[digits[2]]
+	prob += frecuencies.DigitFreq.Position4[digits[3]]
 
 	// Probabilidad por dos dígitos
-	prob += twoDigitRep[0][digits[0]*10+digits[1]] // first+second
-	prob += twoDigitRep[1][digits[1]*10+digits[2]] // second+third
-	prob += twoDigitRep[2][digits[2]*10+digits[3]] // third+fourth
-	prob += twoDigitRep[3][digits[0]*10+digits[2]] // first+third
-	prob += twoDigitRep[4][digits[0]*10+digits[3]] // first+fourth
-	prob += twoDigitRep[5][digits[1]*10+digits[3]] // second+fourth
+	prob += frecuencies.TwoDigitFreq.FirstSecond[digits[0]*10+digits[1]]  // first+second
+	prob += frecuencies.TwoDigitFreq.SecondThird[digits[1]*10+digits[2]]  // second+third
+	prob += frecuencies.TwoDigitFreq.ThirdFourth[digits[2]*10+digits[3]]  // third+fourth
+	prob += frecuencies.TwoDigitFreq.FirstThird[digits[0]*10+digits[2]]   // first+third
+	prob += frecuencies.TwoDigitFreq.FirstFourth[digits[0]*10+digits[3]]  // first+fourth
+	prob += frecuencies.TwoDigitFreq.SecondFourth[digits[1]*10+digits[3]] // second+fourth
 
 	// Probabilidad por tres dígitos
-	prob += threeDigitRep[0][digits[0]*100+digits[1]*10+digits[2]] // first+second+third
-	prob += threeDigitRep[1][digits[1]*100+digits[2]*10+digits[3]] // second+third+fourth
-	prob += threeDigitRep[2][digits[2]*100+digits[3]*10+digits[0]] // third+fourth+first
-	prob += threeDigitRep[3][digits[1]*100+digits[3]*10+digits[0]] // second+fourth+first
+	prob += frecuencies.ThreeDigitFreq.FirstSecondThird[digits[0]*100+digits[1]*10+digits[2]]  // first+second+third
+	prob += frecuencies.ThreeDigitFreq.FirstSecondFourth[digits[0]*100+digits[1]*10+digits[3]] // first+second+fourth
+	prob += frecuencies.ThreeDigitFreq.FirstThirdFourth[digits[0]*100+digits[2]*10+digits[3]]  // first+third+fourth
+	prob += frecuencies.ThreeDigitFreq.SecondThirdFourth[digits[1]*100+digits[2]*10+digits[3]] // second+third+fourth
 
+	prob += frecuencies.FourDigitFreq.Complete[number] // cuatro dígitos completos
 	return prob
 }
 
