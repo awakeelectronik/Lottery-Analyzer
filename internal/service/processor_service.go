@@ -27,6 +27,8 @@ func NewProcessorService(scrapper ScrapperService, resultRepo repository.ResultR
 func (p *processorService) ProcessAnalysis(ctx context.Context) (*model.Analysis, error) {
 	start := time.Now()
 
+	fmt.Printf("Analysis on: %s\n", start.Format(time.DateTime))
+
 	shouldAnalyze, err := p.resultRepo.ShouldAnalyzeDate(ctx, time.Now())
 	if err != nil {
 		// manejar error
@@ -105,7 +107,6 @@ func (p *processorService) ProcessAnalysis(ctx context.Context) (*model.Analysis
 		if err != nil {
 			return nil, fmt.Errorf("failed to get last analysis: %w", err)
 		}
-		fmt.Printf("Using existing analysis: %s\n", data)
 
 		var analysis model.Analysis
 		if err := json.Unmarshal(data, &analysis); err != nil {

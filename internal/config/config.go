@@ -36,7 +36,7 @@ func Load() *Config {
 			MaxIdleConns: getEnvInt("DB_MAX_IDLE_CONNS", 5),
 		},
 		Server: ServerConfig{
-			Port: getEnv("SERVER_PORT", "8080"),
+			Port: getEnv("SERVER_PORT", "5000"), // Default port for the API server if .env is not set
 		},
 		Scrapper: ScrapperConfig{
 			BaseURL: getEnv("SCRAPPER_BASE_URL", "https://resultadodelaloteria.com"),
