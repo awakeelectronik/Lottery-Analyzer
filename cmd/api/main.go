@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"lottery-analyzer/api/middleware"
 	"lottery-analyzer/internal/config"
 	"lottery-analyzer/internal/repository"
 	"lottery-analyzer/internal/service"
@@ -98,9 +99,11 @@ func main() {
 	mux.HandleFunc("/api/v1/analysis/process", api.processAnalysis)
 	mux.HandleFunc("/api/v1/analysis/best-numbers", api.BestNumbers)
 
+	handler := middleware.CORS(middleware.Logging(middleware.Recovery(mux)))
+
 	server := &http.Server{
 		Addr:         ":" + cfg.Server.Port,
-		Handler:      mux,
+		Handler:      handler,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  60 * time.Second,
